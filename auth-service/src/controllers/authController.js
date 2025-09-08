@@ -1,6 +1,12 @@
 import pool from '../config/db.js';
 import bcrypt from 'bcrypt';
 import generateToken from '../utils/generateToken.js';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'refresh-secret';
+
+let refreshToken = [];
 
 export async function signup(req, res){
     try{
@@ -90,3 +96,25 @@ export async function currUser(req, res){
         return res.status(500).json({error: 'internal_server_error'});
     }
 }
+
+export const refresh = (req, res) => {
+    const { token } = req.body;
+  
+    if (!token || !refreshTokens.includes(token)) {
+      return res.status(403).json({ message: 'Invalid refresh token' });
+    }
+  
+    try {
+      const decoded = jwt.verify(token, JWT_REFRESH_SECRET);
+      const accessToken = generateToken({ email: decoded.email }, { expiresIn: '15m' });
+      res.json({ accessToken });
+    } catch (err) {
+      return res.status(403).json({ message: 'Expired refresh token' });
+    }
+}
+
+export const logout = (req, res) => {
+    const { token } = req.body;
+    refreshTokens = refreshTokens.filter(t => t !== token);
+    res.json({ message: 'Logged out successfully' });
+};
