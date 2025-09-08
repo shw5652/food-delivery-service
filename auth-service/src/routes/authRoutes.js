@@ -1,13 +1,13 @@
 import express from 'express';
+import {signup, login, currUser} from '../controllers/authController.js';
+import authenticate from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.post('/signup', (req, res) =>{
-    res.json({message: 'signup endpoint - implement controller'});
-});
+router.post('/signup', signup);
 
-router.post('/login', (req, res)=>{
-    res.json({message: 'login endpoint - implement controller'});
-});
+router.post('/login', login);
+
+router.get('/currUser', authenticate, currUser);
 
 export default router;
