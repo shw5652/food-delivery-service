@@ -8,7 +8,7 @@ export default function authenticate(req, res, next){
         return res.status(401).json({error: 'missing_auth_token'});
     }
 
-    const token = authHEader.split( ' ')[1];
+    const token = authHeader.split(' ')[1];
 
     try{
         const payload = jwt.verify(token, JWT_SECRET);
