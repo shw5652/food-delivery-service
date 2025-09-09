@@ -9,9 +9,13 @@ export const verifyToken = (req, res, next) =>{
     }
 
     const token = authHeader.split(" ")[1];
+    if (!token) {
+        return res.status(401).json({ error: "Malformed token" });
+    }
 
     jwt.verify(token, JWT_SECRET, (err, decoded) => {
         if(err){
+            console.error("JWT verification error:", err.message);
             return res.status(403).json({error: "Invalid token"});
         }
         req.user = decoded;
