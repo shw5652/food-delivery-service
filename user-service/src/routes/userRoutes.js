@@ -6,12 +6,12 @@ const router = express.Router();
 
 router.get("/profile", verifyToken, getProfile);
 
-router.post("/address", verifyToken, addAddress);
+router.post("/address/add", verifyToken, addAddress);
 
-router.get("/addresses", verifyToken, getAddresses);
+router.get("/address/get", verifyToken, getAddresses);
 
-router.put("/address/:id", verifyToken, updateAddress);
+router.put("/address/update", verifyToken, updateAddress);
 
-router.delete("/address/:id", verifyToken, deleteAddress);
+router.delete("/address/delete", verifyToken, deleteAddress);
 
 export default router;
