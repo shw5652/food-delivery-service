@@ -74,7 +74,7 @@ export const login = async (req, res) => {
 
     const accessToken = generateToken(
       { id: user.id, email: user.email },
-      { expiresIn: '15m' }
+      { expiresIn: '7d' }
     );
 
     const newRefreshToken = jwt.sign(
@@ -136,7 +136,7 @@ export const refresh = (req, res) => {
     const decoded = jwt.verify(token, JWT_REFRESH_SECRET);
     const accessToken = generateToken(
       { id: decoded.id, email: decoded.email },
-      { expiresIn: '15m' }
+      { expiresIn: '7d' }
     );
     res.json({ accessToken });
   } catch (err) {
