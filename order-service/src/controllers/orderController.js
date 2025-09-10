@@ -86,19 +86,26 @@ export const updateOrderStatus = async (req, res) => {
         const { id } = req.params;
         const { status } = req.body;
     
-        const result = await db.query(
-            `UPDATE orders.orders SET status = $1 WHERE id = $2 RETURNING *`,
-            [status, id]
-        );
-    
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: "Order not found" });
+        const validStatuses = [
+            "PENDING",
+            "CONFIRMED",
+            "OUT_FOR_DELIVERY",
+            "DELIVERED",
+            "CANCELLED",
+        ];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ error: "Invalid status" });
         }
     
-        res.json(result.rows[0]);
+        const order = await Order.findById(id);
+        if (!order) return res.status(404).json({ error: "Order not found" });
+    
+        order.status = status;
+        await order.save();
+    
+        res.json({ message: "Order status updated", order });
     } catch (err) {
-        console.error("Error updating order status:", err);
-        res.status(500).json({ error: "Server error" });
+        res.status(500).json({ error: err.message });
     }
 };
 

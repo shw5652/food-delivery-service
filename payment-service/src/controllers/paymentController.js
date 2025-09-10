@@ -1,63 +1,73 @@
-import { v4 as uuidv4 } from "uuid";
-import {
-  createPaymentIntent,
-  getPaymentById,
-  updatePaymentStatus,
-} from "../models/paymentModel.js";
+import Payment from "../models/paymentModel.js";
+import axios from "axios";
 
-export const createPayment = async (req, res) => {
+export const createPaymentIntent = async (req, res) => {
   try {
-    const { orderId, amountCents } = req.body;
-    const idempotencyKey = uuidv4();
+    const { orderId, amount, currency } = req.body;
 
-    const payment = await createPaymentIntent(orderId, amountCents, idempotencyKey);
-    if (!payment) {
-      return res.status(400).json({ error: "Payment already exists (idempotency)" });
-    }
+    const payment = new Payment({
+      orderId,
+      amount,
+      currency,
+      status: "CREATED",
+    });
 
-    res.json({ message: "Payment intent created", payment });
+    await payment.save();
+    res.status(201).json(payment);
   } catch (err) {
-    console.error("Create Payment Error:", err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: err.message });
   }
 };
 
 export const confirmPayment = async (req, res) => {
-  try {
-    const { paymentId } = req.params;
-    const providerRef = "razorpay_sim_" + uuidv4();
-
-    const updated = await updatePaymentStatus(paymentId, "SUCCEEDED", providerRef);
-    res.json({ message: "Payment confirmed", payment: updated });
-  } catch (err) {
-    console.error("Confirm Payment Error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-};
-
-export const failPayment = async (req, res) => {
-  try {
-    const { paymentId } = req.params;
-    const providerRef = "razorpay_fail_" + uuidv4();
-
-    const updated = await updatePaymentStatus(paymentId, "FAILED", providerRef);
-    res.json({ message: "Payment failed", payment: updated });
-  } catch (err) {
-    console.error("Fail Payment Error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-};
-
-export const getPayment = async (req, res) => {
-  try {
-    const { paymentId } = req.params;
-    const payment = await getPaymentById(paymentId);
-
-    if (!payment) return res.status(404).json({ error: "Payment not found" });
-
-    res.json({ payment });
-  } catch (err) {
-    console.error("Get Payment Error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-};
+    const { id } = req.params;
+    try {
+      const result = await pool.query(
+        "SELECT * FROM payments.payment_intents WHERE id = $1",
+        [id]
+      );
+  
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: "Payment intent not found" });
+      }
+  
+      const paymentIntent = result.rows[0];
+  
+      const paymentSucceeded = Math.random() < 0.5; 
+  
+      let newStatus = paymentSucceeded ? "SUCCEEDED" : "FAILED";
+  
+      await pool.query(
+        "UPDATE payments.payment_intents SET status = $1 WHERE id = $2",
+        [newStatus, id]
+      );
+  
+      if (paymentSucceeded) {
+        await axios.put(
+          `http://localhost:4003/api/orders/${paymentIntent.order_id}/status`, 
+          { status: "CONFIRMED" },
+          {
+            headers: { Authorization: req.headers.authorization }, 
+          }
+        );
+      } else {
+        await axios.put(
+          `http://localhost:4003/api/orders/${paymentIntent.order_id}/status`,
+          { status: "CANCELLED" },
+          {
+            headers: { Authorization: req.headers.authorization },
+          }
+        );
+      }
+  
+      res.json({
+        message: `Payment ${newStatus}`,
+        paymentIntentId: id,
+        orderId: paymentIntent.order_id,
+        status: newStatus,
+      });
+    } catch (err) {
+      console.error("Error confirming payment:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  };
