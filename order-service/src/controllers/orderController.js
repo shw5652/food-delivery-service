@@ -1,4 +1,5 @@
 import db from "../config/db.js";
+import axios from "axios";
 
 export const placeOrder = async (req, res) =>{
     const client = await db.connect();
@@ -85,25 +86,32 @@ export const updateOrderStatus = async (req, res) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
-    
+        
         const validStatuses = [
             "PENDING",
             "CONFIRMED",
+            "DELIVERY_PARTNER_ASSIGNED",
             "OUT_FOR_DELIVERY",
             "DELIVERED",
             "CANCELLED",
         ];
+
         if (!validStatuses.includes(status)) {
             return res.status(400).json({ error: "Invalid status" });
         }
-    
+
         const order = await Order.findById(id);
-        if (!order) return res.status(404).json({ error: "Order not found" });
-    
+        if (!order) {
+            return res.status(404).json({ error: "Order not found" });
+        }
+
         order.status = status;
         await order.save();
-    
-        res.json({ message: "Order status updated", order });
+
+        res.json({
+            message: `Order status updated to ${status}`,
+            order,
+        });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
