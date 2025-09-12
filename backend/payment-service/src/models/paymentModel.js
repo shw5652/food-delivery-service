@@ -1,4 +1,4 @@
-import { pool } from "../db.js.js";
+import { pool } from "../config/db.js";
 
 export const createPaymentIntent = async (orderId, amountCents, idempotencyKey) => {
   const result = await pool.query(
